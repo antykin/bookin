@@ -1,0 +1,1 @@
+import "./globals.css";export const metadata={title:"bookIN’ | Get In. Get Seen. Get Booked.",description:"The entertainment industry's talent and hiring platform."};export default function Layout({children}){return <html lang="en"><body>{children}</body></html>}
