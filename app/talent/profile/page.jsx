@@ -24,7 +24,7 @@ export default function TalentProfile(){
    const form=new FormData();form.append("file",file);
    const response=await fetch("/api/resume/parse",{method:"POST",headers:{Authorization:"Bearer "+session.access_token},body:form});
    const data=await response.json();if(!response.ok)throw new Error(data.error||"Unable to read résumé.");
-   setResumeCredits(data.credits||[]);setMessage(data.credits?.length?"Review the suggested credits below before importing.":"No structured credits were detected. Try a résumé with entries separated by dashes or vertical bars, or enter credits manually.");
+   setResumeCredits(data.credits||[]);setMessage(data.credits?.length?"PDF read successfully. Review suggested credits below before importing.":"PDF received and read, but no credits were recognized. This layout needs AI parsing or manual corrections.");
   }catch(error){setMessage(error.message);}finally{setResumeBusy(false);e.target.value="";}
  }
  async function importResume(){
