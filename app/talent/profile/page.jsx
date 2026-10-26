@@ -6,7 +6,7 @@ const creditCategories=["Television & Live Shows","Music Videos","Tours","Dance 
 const emptyCredit={production:"",role_name:"",organization:"",credit_year:"",category:"Other"};
 
 export default function TalentProfile(){
- const [resumeCredits,setResumeCredits]=useState([]),[resumeBusy,setResumeBusy]=useState(false),[user,setUser]=useState(null),[profile,setProfile]=useState(null),[credits,setCredits]=useState([]),[selectedCreditIds,setSelectedCreditIds]=useState([]),[works,setWorks]=useState([]),[credit,setCredit]=useState(emptyCredit),[message,setMessage]=useState("Loading..."),[busy,setBusy]=useState(false);
+ const [dashboardTab,setDashboardTab]=useState("overview"),[resumeCredits,setResumeCredits]=useState([]),[resumeBusy,setResumeBusy]=useState(false),[user,setUser]=useState(null),[profile,setProfile]=useState(null),[credits,setCredits]=useState([]),[selectedCreditIds,setSelectedCreditIds]=useState([]),[works,setWorks]=useState([]),[credit,setCredit]=useState(emptyCredit),[message,setMessage]=useState("Loading..."),[busy,setBusy]=useState(false);
  async function load(id){
   const [p,c,w]=await Promise.all([db.from("profiles").select("*").eq("id",id).maybeSingle(),db.from("professional_credits").select("*").eq("user_id",id).order("created_at",{ascending:false}),db.from("portfolio_items").select("*").eq("user_id",id).order("created_at",{ascending:false})]);
   if(p.error||c.error||w.error){setMessage(p.error?.message||c.error?.message||w.error?.message);return;}
@@ -65,10 +65,17 @@ export default function TalentProfile(){
  if(!user||!profile)return <main style={{padding:40}}><a href="/">← bookIN’</a><p>{message}</p></main>;
  if(profile.account_type!=="talent")return <main style={{padding:40}}><a href="/">← bookIN’</a><p>Professional Talent Profiles are for Talent accounts.</p></main>;
  const photo=profile.avatar_path?db.storage.from("talent-headshots").getPublicUrl(profile.avatar_path).data.publicUrl:null;
- return <main style={{background:"#0b0b0b",color:"white",minHeight:"100vh",padding:"35px 18px",fontFamily:"Arial,sans-serif"}}><div style={{maxWidth:850,margin:"auto"}}>
-  <a href="/" style={{color:"#b4ff39"}}>← Back to bookIN’</a><h1>My Talent Profile</h1><p><a href={"/talent/"+user.id} target="_blank" rel="noopener noreferrer" style={{color:"#b4ff39"}}>Preview my public profile ↗</a></p><p style={{color:"#aaa"}}>Build your professional presence. Only approved profiles set to Public can be discovered.</p>
-  {message&&<p role="status" style={{color:"#b4ff39"}}>{message}</p>}
-  <section style={section}><h2>Headshot</h2>{photo&&<img src={photo} alt="Your professional headshot" style={{width:150,height:150,objectFit:"cover",borderRadius:12}}/>}<p>JPG, PNG or WebP, maximum 5 MB. Uploaded images have public URLs.</p><input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={upload}/></section>
+ return <main className="member-studio"><div className="member-shell">
+ <aside className="member-sidebar"><a className="member-brand" href="/">book<span>IN’</span></a><div className="member-sidebar-label">TALENT STUDIO</div>
+ <nav aria-label="Member dashboard">{[["overview","⌂","Dashboard"],["profile","◉","My Profile"],["credits","▤","Resume & Credits"],["portfolio","▦","Portfolio & Socials"]].map(([key,icon,label])=><button type="button" key={key} className={"member-nav-item"+(dashboardTab===key?" is-active":"")} onClick={()=>setDashboardTab(key)}><span aria-hidden="true">{icon}</span>{label}</button>)}</nav>
+ <div className="member-sidebar-bottom"><a href={"/talent/"+user.id} target="_blank" rel="noopener noreferrer">↗ View Public Profile</a><a href="/">← Back to bookIN’</a></div></aside>
+ <div className="member-content"><header className="member-topbar"><div><span className="member-eyebrow">CREATOR STUDIO</span><h1>{({overview:"Dashboard",profile:"My Profile",credits:"Resume & Credits",portfolio:"Portfolio & Socials"})[dashboardTab]}</h1></div><div className="member-account"><span className="member-account-avatar">{(profile.display_name||"T").slice(0,1).toUpperCase()}</span><div><strong>{profile.display_name||"Talent Member"}</strong><small>Talent account</small></div></div></header>
+ {message&&<p role="status" className="member-status">{message}</p>}
+ {dashboardTab==="overview"&&<><section className="member-welcome"><span className="member-eyebrow">WELCOME TO YOUR STUDIO</span><h2>Make your next booking happen.</h2><p>Manage your professional profile, highlight your work, and keep your credits organized — all in one place.</p><button type="button" onClick={()=>setDashboardTab("profile")}>Edit my profile →</button></section>
+ <div className="member-stats"><div><small>Professional credits</small><strong>{credits.length}</strong><span>Added to your résumé</span></div><div><small>Portfolio photos</small><strong>{works.filter(w=>w.media_type==="image").length}</strong><span>Showcasing your work</span></div><div><small>Profile status</small><strong className="member-stat-status">{profile.visibility==="public"&&profile.approval_status==="approved"?"Live":profile.approval_status==="pending"?"Pending":"Private"}</strong><span>{profile.visibility==="public"?"Public visibility selected":"Not publicly visible"}</span></div></div>
+ <section className="member-card"><h2>Quick actions</h2><div className="member-actions">{[["Update profile","Change your bio, headshot and professional details","profile"],["Manage résumé","Import, categorize or bulk remove credits","credits"],["Add portfolio photos","Show clients your best work","portfolio"]].map(([title,description,key])=><button type="button" key={key} onClick={()=>setDashboardTab(key)}><strong>{title} →</strong><span>{description}</span></button>)}</div></section>
+ <section className="member-card"><h2>Public profile</h2><p>See how clients experience your page and booking request form.</p><a className="member-view-link" href={"/talent/"+user.id} target="_blank" rel="noopener noreferrer">Preview public profile ↗</a></section></>}
+ {dashboardTab==="profile"&&<>  <section style={section}><h2>Headshot</h2>{photo&&<img src={photo} alt="Your professional headshot" style={{width:150,height:150,objectFit:"cover",borderRadius:12}}/>}<p>JPG, PNG or WebP, maximum 5 MB. Uploaded images have public URLs.</p><input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={upload}/></section>
   <section style={section}><h2>Professional Details</h2><form onSubmit={save}>
    {field("display_name","Professional name")}{field("headline","Professional headline")}{field("bio","Biography",true)}{field("city","City")}{field("region","State / Region")}{field("country","Country")}
    <label>Specialties (separate with commas)<input style={input} value={(profile.specialties||[]).join(", ")} onChange={e=>change("specialties",e.target.value.split(",").map(x=>x.trim()).filter(Boolean))}/></label>
@@ -76,7 +83,8 @@ export default function TalentProfile(){
    <label>Profile visibility<select style={input} value={profile.visibility||"private"} onChange={e=>change("visibility",e.target.value)}><option value="private">Private</option><option value="public">Public (after approval)</option></select></label>
    <button style={btn} disabled={busy}>Save Profile</button>
   </form></section>
-  <section style={section}><h2>Professional Credits</h2><div style={{padding:16,border:"1px solid #666",borderRadius:12,marginBottom:20}}>
+ </>}
+ {dashboardTab==="credits"&&<>  <section style={section}><h2>Professional Credits</h2><div style={{padding:16,border:"1px solid #666",borderRadius:12,marginBottom:20}}>
    <h3>Upload your résumé</h3><p>PDF, Word (.docx), or TXT up to 5 MB. We'll suggest credits automatically. Your résumé is processed for extraction and is not stored by this feature.</p>
    <input type="file" accept=".pdf,.docx,.txt" disabled={resumeBusy} onChange={parseResume}/>
    {resumeBusy&&<p>Processing résumé...</p>}
@@ -104,7 +112,8 @@ export default function TalentProfile(){
   </div>)}
    <h3>Additional Resume Credit</h3><form onSubmit={addCredit}><label style={{display:"block"}}>Credit category<select style={input} value={credit.category} onChange={e=>setCredit({...credit,category:e.target.value})}>{creditCategories.map(t=><option key={t}>{t}</option>)}</select></label>{["production","role_name","organization","credit_year"].map(k=><label key={k} style={{display:"block"}}>{({production:"Production / Project",role_name:"Your Role",organization:"Organization/Lead",credit_year:"Year"})[k]}<input style={input} type={k==="credit_year"?"number":"text"} required={k==="production"||k==="role_name"} value={credit[k]} onChange={e=>setCredit({...credit,[k]:e.target.value})}/></label>)}<button style={btn} disabled={busy}>Add Credit</button></form>
   </section>
-  <section style={section}><h2>My Portfolio</h2>
+ </>}
+ {dashboardTab==="portfolio"&&<>  <section style={section}><h2>My Portfolio</h2>
    <p>Upload your best photos to showcase your work. JPG, PNG, WebP, or GIF, up to 10 MB each. Uploaded photos have public URLs.</p>
    <label style={{display:"block",marginBottom:18,fontWeight:700}}>Upload portfolio photos
     <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple disabled={busy} onChange={uploadPortfolio} style={{display:"block",marginTop:10}}/>
@@ -120,5 +129,6 @@ export default function TalentProfile(){
    {["instagram_url","tiktok_url","youtube_url"].map(k=><label key={k} style={{display:"block"}}>{({instagram_url:"Instagram",tiktok_url:"TikTok",youtube_url:"YouTube"})[k]}<input type="url" placeholder={({instagram_url:"https://www.instagram.com/yourname",tiktok_url:"https://www.tiktok.com/@yourname",youtube_url:"https://www.youtube.com/@yourchannel"})[k]} style={input} value={profile[k]||""} onChange={e=>change(k,e.target.value)}/></label>)}
    <button type="button" style={btn} disabled={busy} onClick={()=>save({preventDefault:()=>{}})}>Save Social Links</button>
   </section>
- </div></main>;
+ </>}
+ </div></div></main>;
 }
