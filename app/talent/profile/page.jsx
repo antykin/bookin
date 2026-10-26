@@ -6,11 +6,11 @@ const creditCategories=["Television & Live Shows","Music Videos","Tours","Dance 
 const emptyCredit={production:"",role_name:"",organization:"",credit_year:"",category:"Other"};
 
 export default function TalentProfile(){
- const [resumeCredits,setResumeCredits]=useState([]),[resumeBusy,setResumeBusy]=useState(false),[user,setUser]=useState(null),[profile,setProfile]=useState(null),[credits,setCredits]=useState([]),[works,setWorks]=useState([]),[credit,setCredit]=useState(emptyCredit),[message,setMessage]=useState("Loading..."),[busy,setBusy]=useState(false);
+ const [resumeCredits,setResumeCredits]=useState([]),[resumeBusy,setResumeBusy]=useState(false),[user,setUser]=useState(null),[profile,setProfile]=useState(null),[credits,setCredits]=useState([]),[selectedCreditIds,setSelectedCreditIds]=useState([]),[works,setWorks]=useState([]),[credit,setCredit]=useState(emptyCredit),[message,setMessage]=useState("Loading..."),[busy,setBusy]=useState(false);
  async function load(id){
   const [p,c,w]=await Promise.all([db.from("profiles").select("*").eq("id",id).maybeSingle(),db.from("professional_credits").select("*").eq("user_id",id).order("created_at",{ascending:false}),db.from("portfolio_items").select("*").eq("user_id",id).order("created_at",{ascending:false})]);
   if(p.error||c.error||w.error){setMessage(p.error?.message||c.error?.message||w.error?.message);return;}
-  setProfile(p.data);setCredits(c.data||[]);setWorks(w.data||[]);setMessage("");
+  setProfile(p.data);setCredits(c.data||[]);setSelectedCreditIds(current=>current.filter(id=>(c.data||[]).some(item=>item.id===id)));setWorks(w.data||[]);setMessage("");
  }
  useEffect(()=>{db.auth.getUser().then(({data:{user}})=>{if(!user){setMessage("Please log in on the homepage first.");return;}setUser(user);load(user.id)})},[]);
  const change=(k,v)=>setProfile(p=>({...p,[k]:v}));
@@ -38,6 +38,7 @@ export default function TalentProfile(){
   await load(user.id);setResumeBusy(false);if(!error)setMessage(rows.length+" credits imported.");
  }
  async function addCredit(e){e.preventDefault();setBusy(true);const {error}=await db.from("professional_credits").insert({user_id:user.id,production:credit.production,role_name:credit.role_name,organization:credit.organization,credit_year:credit.credit_year?Number(credit.credit_year):null,category:credit.category});setMessage(error?error.message:"Credit added.");if(!error)setCredit(emptyCredit);await load(user.id);setBusy(false);}
+ async function removeSelectedCredits(){const ids=selectedCreditIds.filter(id=>credits.some(c=>c.id===id));if(!ids.length)return;if(!window.confirm("Permanently remove "+ids.length+" selected résumé credit"+(ids.length===1?"":"s")+"? This cannot be undone."))return;setBusy(true);const {error}=await db.from("professional_credits").delete().eq("user_id",user.id).in("id",ids);if(error){setMessage(error.message);}else{setSelectedCreditIds([]);await load(user.id);setMessage(ids.length+" résumé credit"+(ids.length===1?"":"s")+" removed.");}setBusy(false);}
  async function uploadPortfolio(e){
   const files=Array.from(e.target.files||[]);if(!files.length)return;
   setBusy(true);let added=0;let errors=[];
@@ -90,7 +91,17 @@ export default function TalentProfile(){
     </div>)}
     <p><button style={btn} disabled={resumeBusy} onClick={importResume}>Import {resumeCredits.length} credits</button></p>
    </div>}
-  </div>{credits.map(c=><div key={c.id} style={{borderBottom:"1px solid #444",padding:10}}><strong>{c.production}</strong> — {c.role_name} <span style={{color:"#b4ff39"}}>({c.category||"Uncategorized"})</span><p>{c.organization} {c.credit_year||""} {c.verified?"✓ Verified":""}</p><button onClick={()=>remove("professional_credits",c.id)}>Remove</button></div>)}
+  </div>{credits.length>0&&<div style={{padding:15,border:"1px solid #505b4a",borderRadius:12,marginBottom:15,background:"#111713"}}>
+   <h3 style={{marginTop:0}}>Manage Resume Credits</h3>
+   <label style={{display:"inline-flex",alignItems:"center",gap:9,cursor:"pointer",marginRight:16}}><input type="checkbox" disabled={busy} checked={credits.length>0&&selectedCreditIds.length===credits.length} onChange={e=>setSelectedCreditIds(e.target.checked?credits.map(c=>c.id):[])}/> Select all ({credits.length})</label>
+   <button type="button" disabled={busy||!selectedCreditIds.length} onClick={()=>setSelectedCreditIds([])} style={{marginRight:12}}>Clear selection</button>
+   <button type="button" disabled={busy||!selectedCreditIds.length} onClick={removeSelectedCredits} style={{padding:"10px 14px",background:selectedCreditIds.length?"#a93535":"#333",color:"#fff",border:0,borderRadius:8,cursor:selectedCreditIds.length?"pointer":"not-allowed"}}>Remove selected ({selectedCreditIds.length})</button>
+   <p style={{fontSize:12,color:"#aaa"}}>Select individual credits below, or use Select all to remove several at once. You'll be asked to confirm.</p>
+  </div>}
+  {credits.map(c=><div key={c.id} style={{borderBottom:"1px solid #444",padding:10,display:"flex",alignItems:"flex-start",gap:12}}>
+   <input type="checkbox" aria-label={"Select "+c.production} checked={selectedCreditIds.includes(c.id)} disabled={busy} onChange={e=>setSelectedCreditIds(a=>e.target.checked?[...a,c.id]:a.filter(id=>id!==c.id))} style={{marginTop:5,width:18,height:18,accentColor:"#b4ff39"}}/>
+   <div style={{flex:1}}><strong>{c.production}</strong> — {c.role_name} <span style={{color:"#b4ff39"}}>({c.category||"Uncategorized"})</span><p>{c.organization} {c.credit_year||""} {c.verified?"✓ Verified":""}</p><button type="button" disabled={busy} onClick={()=>remove("professional_credits",c.id)}>Remove</button></div>
+  </div>)}
    <h3>Additional Resume Credit</h3><form onSubmit={addCredit}><label style={{display:"block"}}>Credit category<select style={input} value={credit.category} onChange={e=>setCredit({...credit,category:e.target.value})}>{creditCategories.map(t=><option key={t}>{t}</option>)}</select></label>{["production","role_name","organization","credit_year"].map(k=><label key={k} style={{display:"block"}}>{({production:"Production / Project",role_name:"Your Role",organization:"Organization/Lead",credit_year:"Year"})[k]}<input style={input} type={k==="credit_year"?"number":"text"} required={k==="production"||k==="role_name"} value={credit[k]} onChange={e=>setCredit({...credit,[k]:e.target.value})}/></label>)}<button style={btn} disabled={busy}>Add Credit</button></form>
   </section>
   <section style={section}><h2>My Portfolio</h2>
