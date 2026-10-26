@@ -2,7 +2,8 @@
 import {useEffect,useState} from "react";
 import {createClient} from "@supabase/supabase-js";
 const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-const emptyCredit={production:"",role_name:"",organization:"",credit_year:""};
+const creditCategories=["Television & Live Shows","Music Videos","Tours","Dance Teams","Commercials","Residencies","College Dance Teams","Film","Other"];
+const emptyCredit={production:"",role_name:"",organization:"",credit_year:"",category:"Other"};
 
 export default function TalentProfile(){
  const [resumeCredits,setResumeCredits]=useState([]),[resumeBusy,setResumeBusy]=useState(false),[user,setUser]=useState(null),[profile,setProfile]=useState(null),[credits,setCredits]=useState([]),[works,setWorks]=useState([]),[credit,setCredit]=useState(emptyCredit),[message,setMessage]=useState("Loading..."),[busy,setBusy]=useState(false);
@@ -31,12 +32,12 @@ export default function TalentProfile(){
   const valid=resumeCredits.filter(c=>c.production.trim()&&c.role_name.trim());
   if(!valid.length){setMessage("No complete credits to import.");return;}
   setResumeBusy(true);
-  const rows=valid.map(c=>({user_id:user.id,production:c.production.trim(),role_name:c.role_name.trim(),organization:c.organization||"",credit_year:c.credit_year?Number(c.credit_year):null}));
+  const rows=valid.map(c=>({user_id:user.id,production:c.production.trim(),role_name:c.role_name.trim(),organization:c.organization||"",credit_year:c.credit_year?Number(c.credit_year):null,category:creditCategories.includes(c.category)?c.category:"Other"}));
   const {error}=await db.from("professional_credits").insert(rows);
   if(error)setMessage(error.message);else{setMessage(rows.length+" credits imported.");setResumeCredits([]);}
   await load(user.id);setResumeBusy(false);if(!error)setMessage(rows.length+" credits imported.");
  }
- async function addCredit(e){e.preventDefault();setBusy(true);const {error}=await db.from("professional_credits").insert({user_id:user.id,production:credit.production,role_name:credit.role_name,organization:credit.organization,credit_year:credit.credit_year?Number(credit.credit_year):null});setMessage(error?error.message:"Credit added.");if(!error)setCredit(emptyCredit);await load(user.id);setBusy(false);}
+ async function addCredit(e){e.preventDefault();setBusy(true);const {error}=await db.from("professional_credits").insert({user_id:user.id,production:credit.production,role_name:credit.role_name,organization:credit.organization,credit_year:credit.credit_year?Number(credit.credit_year):null,category:credit.category});setMessage(error?error.message:"Credit added.");if(!error)setCredit(emptyCredit);await load(user.id);setBusy(false);}
  async function uploadPortfolio(e){
   const files=Array.from(e.target.files||[]);if(!files.length)return;
   setBusy(true);let added=0;let errors=[];
@@ -80,16 +81,17 @@ export default function TalentProfile(){
    {resumeBusy&&<p>Processing résumé...</p>}
    {resumeCredits.length>0&&<div><h3>Review {resumeCredits.length} suggested credits</h3><p>Edit or remove any mistakes before adding them to your profile. Imported credits are not marked verified.</p>
     {resumeCredits.map((c,i)=><div key={i} style={{borderTop:"1px solid #555",paddingTop:12}}>
+     <label>Category<select style={input} value={creditCategories.includes(c.category)?c.category:"Other"} onChange={e=>setResumeCredits(a=>a.map((x,j)=>j===i?{...x,category:e.target.value}:x))}>{creditCategories.map(t=><option key={t}>{t}</option>)}</select></label>
      <label>Project<input style={input} value={c.production} onChange={e=>setResumeCredits(a=>a.map((x,j)=>j===i?{...x,production:e.target.value}:x))}/></label>
      <label>Role<input style={input} value={c.role_name} onChange={e=>setResumeCredits(a=>a.map((x,j)=>j===i?{...x,role_name:e.target.value}:x))}/></label>
-     <label>Organization<input style={input} value={c.organization} onChange={e=>setResumeCredits(a=>a.map((x,j)=>j===i?{...x,organization:e.target.value}:x))}/></label>
+     <label>Organization/Lead<input style={input} value={c.organization} onChange={e=>setResumeCredits(a=>a.map((x,j)=>j===i?{...x,organization:e.target.value}:x))}/></label>
      <label>Year<input style={input} type="number" value={c.credit_year||""} onChange={e=>setResumeCredits(a=>a.map((x,j)=>j===i?{...x,credit_year:e.target.value}:x))}/></label>
      <button type="button" onClick={()=>setResumeCredits(a=>a.filter((_,j)=>j!==i))}>Remove suggestion</button>
     </div>)}
     <p><button style={btn} disabled={resumeBusy} onClick={importResume}>Import {resumeCredits.length} credits</button></p>
    </div>}
-  </div>{credits.map(c=><div key={c.id} style={{borderBottom:"1px solid #444",padding:10}}><strong>{c.production}</strong> — {c.role_name}<p>{c.organization} {c.credit_year||""} {c.verified?"✓ Verified":""}</p><button onClick={()=>remove("professional_credits",c.id)}>Remove</button></div>)}
-   <h3>Additional Resume Credit</h3><form onSubmit={addCredit}>{["production","role_name","organization","credit_year"].map(k=><label key={k} style={{display:"block"}}>{({production:"Production / Project",role_name:"Your Role",organization:"Organization/Lead",credit_year:"Year"})[k]}<input style={input} type={k==="credit_year"?"number":"text"} required={k==="production"||k==="role_name"} value={credit[k]} onChange={e=>setCredit({...credit,[k]:e.target.value})}/></label>)}<button style={btn} disabled={busy}>Add Credit</button></form>
+  </div>{credits.map(c=><div key={c.id} style={{borderBottom:"1px solid #444",padding:10}}><strong>{c.production}</strong> — {c.role_name} <span style={{color:"#b4ff39"}}>({c.category||"Uncategorized"})</span><p>{c.organization} {c.credit_year||""} {c.verified?"✓ Verified":""}</p><button onClick={()=>remove("professional_credits",c.id)}>Remove</button></div>)}
+   <h3>Additional Resume Credit</h3><form onSubmit={addCredit}><label style={{display:"block"}}>Credit category<select style={input} value={credit.category} onChange={e=>setCredit({...credit,category:e.target.value})}>{creditCategories.map(t=><option key={t}>{t}</option>)}</select></label>{["production","role_name","organization","credit_year"].map(k=><label key={k} style={{display:"block"}}>{({production:"Production / Project",role_name:"Your Role",organization:"Organization/Lead",credit_year:"Year"})[k]}<input style={input} type={k==="credit_year"?"number":"text"} required={k==="production"||k==="role_name"} value={credit[k]} onChange={e=>setCredit({...credit,[k]:e.target.value})}/></label>)}<button style={btn} disabled={busy}>Add Credit</button></form>
   </section>
   <section style={section}><h2>My Portfolio</h2>
    <p>Upload your best photos to showcase your work. JPG, PNG, WebP, or GIF, up to 10 MB each. Uploaded photos have public URLs.</p>
