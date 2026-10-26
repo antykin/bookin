@@ -89,7 +89,7 @@ export default function TalentProfile(){
     <p><button style={btn} disabled={resumeBusy} onClick={importResume}>Import {resumeCredits.length} credits</button></p>
    </div>}
   </div>{credits.map(c=><div key={c.id} style={{borderBottom:"1px solid #444",padding:10}}><strong>{c.production}</strong> — {c.role_name}<p>{c.organization} {c.credit_year||""} {c.verified?"✓ Verified":""}</p><button onClick={()=>remove("professional_credits",c.id)}>Remove</button></div>)}
-   <h3>Add a credit</h3><form onSubmit={addCredit}>{["production","role_name","organization","credit_year"].map(k=><label key={k} style={{display:"block"}}>{({production:"Production / Project",role_name:"Your Role",organization:"Organization",credit_year:"Year"})[k]}<input style={input} type={k==="credit_year"?"number":"text"} required={k==="production"||k==="role_name"} value={credit[k]} onChange={e=>setCredit({...credit,[k]:e.target.value})}/></label>)}<button style={btn} disabled={busy}>Add Credit</button></form>
+   <h3>Additional Resume Credit</h3><form onSubmit={addCredit}>{["production","role_name","organization","credit_year"].map(k=><label key={k} style={{display:"block"}}>{({production:"Production / Project",role_name:"Your Role",organization:"Organization/Lead",credit_year:"Year"})[k]}<input style={input} type={k==="credit_year"?"number":"text"} required={k==="production"||k==="role_name"} value={credit[k]} onChange={e=>setCredit({...credit,[k]:e.target.value})}/></label>)}<button style={btn} disabled={busy}>Add Credit</button></form>
   </section>
   <section style={section}><h2>My Portfolio</h2>
    <p>Upload your best photos to showcase your work. JPG, PNG, WebP, or GIF, up to 10 MB each. Uploaded photos have public URLs.</p>
