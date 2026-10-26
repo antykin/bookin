@@ -8,7 +8,7 @@ const platforms=[
  {key:"tiktok_url",label:"TikTok",host:"tiktok.com",symbol:"♪",color:"#ffffff"},
  {key:"youtube_url",label:"YouTube",host:"youtube.com",symbol:"▶",color:"#ff3434"}
 ];
-function socialUrl(value,host){try{const u=new URL(value);return u.protocol==="https:"&&(u.hostname===host||u.hostname==="www."+host)?u.href:null}catch{return null}}
+function socialUrl(value,host){if(!value||!String(value).trim())return null;let raw=String(value).trim();if(raw.startsWith("@"))raw="https://"+host+"/"+raw.slice(1);else if(!/^https?:\/\//i.test(raw))raw=raw.includes(".")?"https://"+raw:"https://"+host+"/"+raw;try{const u=new URL(raw);const h=u.hostname.toLowerCase();return (u.protocol==="https:"||u.protocol==="http:")&&(h===host||h==="www."+host||h==="m."+host)?("https://"+h+u.pathname+u.search):null}catch{return null}}
 export default function PublicTalentProfile(){
  const {id}=useParams(),[activeTab,setActiveTab]=useState("portfolio"),[bookingType,setBookingType]=useState("Solo"),[dates,setDates]=useState([]),[month,setMonth]=useState(new Date(new Date().getFullYear(),new Date().getMonth(),1)),[dancers,setDancers]=useState(1),[routines,setRoutines]=useState(1),[hours,setHours]=useState(0),[location,setLocation]=useState(""),[notes,setNotes]=useState(""),[requestMessage,setRequestMessage]=useState(""),[sending,setSending]=useState(false),[profile,setProfile]=useState(null),[credits,setCredits]=useState([]),[photos,setPhotos]=useState([]),[loading,setLoading]=useState(true);
  useEffect(()=>{let active=true;(async()=>{
