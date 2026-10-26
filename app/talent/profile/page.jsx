@@ -64,7 +64,7 @@ export default function TalentProfile(){
  if(profile.account_type!=="talent")return <main style={{padding:40}}><a href="/">← bookIN’</a><p>Professional Talent Profiles are for Talent accounts.</p></main>;
  const photo=profile.avatar_path?db.storage.from("talent-headshots").getPublicUrl(profile.avatar_path).data.publicUrl:null;
  return <main style={{background:"#0b0b0b",color:"white",minHeight:"100vh",padding:"35px 18px",fontFamily:"Arial,sans-serif"}}><div style={{maxWidth:850,margin:"auto"}}>
-  <a href="/" style={{color:"#b4ff39"}}>← Back to bookIN’</a><h1>My Talent Profile</h1><p style={{color:"#aaa"}}>Build your professional presence. Only approved profiles set to Public can be discovered.</p>
+  <a href="/" style={{color:"#b4ff39"}}>← Back to bookIN’</a><h1>My Talent Profile</h1><p><a href={"/talent/"+user.id} target="_blank" rel="noopener noreferrer" style={{color:"#b4ff39"}}>Preview my public profile ↗</a></p><p style={{color:"#aaa"}}>Build your professional presence. Only approved profiles set to Public can be discovered.</p>
   {message&&<p role="status" style={{color:"#b4ff39"}}>{message}</p>}
   <section style={section}><h2>Headshot</h2>{photo&&<img src={photo} alt="Your professional headshot" style={{width:150,height:150,objectFit:"cover",borderRadius:12}}/>}<p>JPG, PNG or WebP, maximum 5 MB. Uploaded images have public URLs.</p><input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={upload}/></section>
   <section style={section}><h2>Professional Details</h2><form onSubmit={save}>
