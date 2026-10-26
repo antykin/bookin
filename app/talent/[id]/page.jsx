@@ -57,4 +57,3 @@ export default function PublicTalentProfile(){
  <section className="stage-card"><h2>Booking process</h2><div className="stage-timeline">{[["1","Client requests","Choose dates and describe the project."],["2","Talent reviews","Confirm a date and discuss scope."],["3","Agreement & deposit","Coming soon — no payments collected yet."],["4","Project confirmation","Confirm final booking details."],["5","Completion","Close out the booking after the project."]].map(([n,t,d])=><div className="stage-step" key={n}><span>{n}</span><div><strong>{t}</strong><p>{d}</p></div></div>)}</div></section>
  </aside></div></div></main>
 }
-}
