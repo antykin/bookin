@@ -4,19 +4,29 @@ export const runtime="nodejs";
 const headings=/^(experience|professional experience|selected credits|credits|film|television|tv|commercials|music videos|live performances|theatre|theater|tours|choreography|performance|work history|projects|resume|résumé|education|skills|training|awards|references|contact)$/i;
 function parseCredits(text){
  const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
- let section="",out=[];
+ const out=[];let section="";
+ const rolePattern=/(Supervising\s+Choreographer|Associate\s+Choreographer|Creative\s+Director\s*\/\s*Choreographer|Crea\s+ve\s+Director\s*\/\s*Choreographer|Choreographer)/i;
+ const sectionNames=/^(Television\s*&\s*Live Shows|Vegas Residency|NBA\s*&\s*NFL Dance Teams|Tours|Music Videos|Commercials|College Dance Teams|Experience|Professional Experience|Selected Credits|Credits|Film|Television|TV|Live Performances|Theatre|Theater|Education|Skills|Training|Awards|References|Contact)$/i;
  for(const line of lines){
-  if(headings.test(line.replace(/:$/,""))){section=line.replace(/:$/,"");continue;}
+  if(sectionNames.test(line.replace(/:$/,""))){section=line.replace(/:$/,"");continue;}
   if(/^(education|skills|training|awards|references|contact)$/i.test(section))continue;
-  if(line.length<5||line.length>180||/^(https?:|www\.|email:|phone:|@)/i.test(line)||/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(line))continue;
-  const parts=line.split(/\s*[|•–—\t]\s*|\s{2,}/).map(x=>x.trim()).filter(Boolean);
-  if(parts.length<2)continue;
-  const yearMatch=line.match(/\b(19\d{2}|20\d{2})\b/);
-  const year=yearMatch?Number(yearMatch[1]):null;
-  const production=parts[0].replace(/\b(19\d{2}|20\d{2})\b/g,"").trim();
-  const role=parts[1].replace(/\b(19\d{2}|20\d{2})\b/g,"").trim();
-  if(!production||!role||production.length>100||role.length>100)continue;
-  out.push({production,role_name:role,organization:parts.slice(2).join(" · ").slice(0,150),credit_year:year});
+  if(line.length<5||line.length>250||/^(https?:|www\.|email:|phone:|@)/i.test(line)||/SAG-AFTRA UNION/i.test(line))continue;
+  const match=rolePattern.exec(line);
+  let production="",role="",organization="";
+  if(match){
+   production=line.slice(0,match.index).replace(/[\s|•–—]+$/,"").trim();
+   role=match[0].replace(/Crea\s+ve/i,"Creative");
+   organization=line.slice(match.index+match[0].length).replace(/^[\s|•–—]+/,"").trim();
+  }else if(/NBA\s*&\s*NFL Dance Teams/i.test(section)){
+   production=line;role="Dance Team";
+  }else{
+   const parts=line.split(/\t+|\s{2,}|\s+[|•–—]\s+/).map(x=>x.trim()).filter(Boolean);
+   if(parts.length>=2){[production,role]=parts;organization=parts.slice(2).join(" · ");}
+  }
+  if(!production||!role||production.length>150||role.length>100)continue;
+  const years=production.match(/\b(?:19|20)\d{2}\b/g);
+  const credit_year=years?.length===1?Number(years[0]):null;
+  out.push({production,role_name:role,organization:organization.slice(0,150),credit_year});
   if(out.length>=80)break;
  }
  return out;
