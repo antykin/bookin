@@ -33,7 +33,8 @@ export async function POST(request){
   const name=file.name.toLowerCase(),buffer=Buffer.from(await file.arrayBuffer());
   let text="";
   if(name.endsWith(".pdf")){
-   const pdf=(await import("pdf-parse")).default;
+   const pdfModule=await import("pdf-parse/lib/pdf-parse.js");
+   const pdf=pdfModule.default||pdfModule;
    text=(await pdf(buffer)).text;
   }else if(name.endsWith(".docx")){
    const mammoth=await import("mammoth");
