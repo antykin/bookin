@@ -3,13 +3,13 @@ import {createClient} from "@supabase/supabase-js";
 export const runtime="nodejs";
 const headings=/^(experience|professional experience|selected credits|credits|film|television|tv|commercials|music videos|live performances|theatre|theater|tours|choreography|performance|work history|projects|resume|résumé|education|skills|training|awards|references|contact)$/i;
 function parseCredits(text){
- const lines=text.split(/\r?\n/).map(x=>x.replace(/\s+/g," ").trim()).filter(Boolean);
+ const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
  let section="",out=[];
  for(const line of lines){
   if(headings.test(line.replace(/:$/,""))){section=line.replace(/:$/,"");continue;}
   if(/^(education|skills|training|awards|references|contact)$/i.test(section))continue;
   if(line.length<5||line.length>180||/^(https?:|www\.|email:|phone:|@)/i.test(line)||/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(line))continue;
-  const parts=line.split(/\s+[|•–—]\s+|\s{2,}/).map(x=>x.trim()).filter(Boolean);
+  const parts=line.split(/\s*[|•–—\t]\s*|\s{2,}/).map(x=>x.trim()).filter(Boolean);
   if(parts.length<2)continue;
   const yearMatch=line.match(/\b(19\d{2}|20\d{2})\b/);
   const year=yearMatch?Number(yearMatch[1]):null;
