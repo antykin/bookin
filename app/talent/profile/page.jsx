@@ -38,6 +38,24 @@ export default function TalentProfile(){
  }
  async function addCredit(e){e.preventDefault();setBusy(true);const {error}=await db.from("professional_credits").insert({user_id:user.id,production:credit.production,role_name:credit.role_name,organization:credit.organization,credit_year:credit.credit_year?Number(credit.credit_year):null});setMessage(error?error.message:"Credit added.");if(!error)setCredit(emptyCredit);await load(user.id);setBusy(false);}
  async function addWork(e){e.preventDefault();setBusy(true);const {error}=await db.from("portfolio_items").insert({...work,user_id:user.id});setMessage(error?error.message:"Portfolio item added.");if(!error)setWork(emptyWork);await load(user.id);setBusy(false);}
+ async function uploadPortfolio(e){
+  const files=Array.from(e.target.files||[]);if(!files.length)return;
+  setBusy(true);let added=0;let errors=[];
+  for(const file of files){
+   const isImage=["image/jpeg","image/png","image/webp","image/gif"].includes(file.type);
+   const isVideo=["video/mp4","video/webm","video/quicktime"].includes(file.type);
+   if(!isImage&&!isVideo){errors.push(file.name+": unsupported format");continue;}
+   if(file.size>50*1024*1024){errors.push(file.name+": maximum 50 MB");continue;}
+   const ext=file.name.split(".").pop().toLowerCase();
+   const path=user.id+"/"+crypto.randomUUID()+"."+ext;
+   const {error:uploadError}=await db.storage.from("talent-portfolio").upload(path,file,{contentType:file.type});
+   if(uploadError){errors.push(file.name+": "+uploadError.message);continue;}
+   const url=db.storage.from("talent-portfolio").getPublicUrl(path).data.publicUrl;
+   const {error:insertError}=await db.from("portfolio_items").insert({user_id:user.id,title:file.name.replace(/\.[^.]+$/,"").replace(/[_-]/g," "),description:"",media_url:url,media_type:isImage?"image":"video"});
+   if(insertError){await db.storage.from("talent-portfolio").remove([path]);errors.push(file.name+": "+insertError.message);}else added++;
+  }
+  await load(user.id);setMessage(added+" file(s) added to My Portfolio."+(errors.length?" Issues: "+errors.join("; "):""));setBusy(false);e.target.value="";
+ }
  async function remove(table,id){if(!window.confirm("Delete this item?"))return;const {error}=await db.from(table).delete().eq("id",id).eq("user_id",user.id);setMessage(error?error.message:"Item deleted.");await load(user.id);}
  const input={width:"100%",padding:11,borderRadius:8,border:"1px solid #666",marginTop:5,marginBottom:13,background:"#171717",color:"#fff"};
  const section={padding:24,background:"#171717",border:"1px solid #444",borderRadius:16,marginBottom:22};
@@ -74,8 +92,19 @@ export default function TalentProfile(){
   </div>{credits.map(c=><div key={c.id} style={{borderBottom:"1px solid #444",padding:10}}><strong>{c.production}</strong> — {c.role_name}<p>{c.organization} {c.credit_year||""} {c.verified?"✓ Verified":""}</p><button onClick={()=>remove("professional_credits",c.id)}>Remove</button></div>)}
    <h3>Add a credit</h3><form onSubmit={addCredit}>{["production","role_name","organization","credit_year"].map(k=><label key={k} style={{display:"block"}}>{({production:"Production / Project",role_name:"Your Role",organization:"Organization",credit_year:"Year"})[k]}<input style={input} type={k==="credit_year"?"number":"text"} required={k==="production"||k==="role_name"} value={credit[k]} onChange={e=>setCredit({...credit,[k]:e.target.value})}/></label>)}<button style={btn} disabled={busy}>Add Credit</button></form>
   </section>
-  <section style={section}><h2>Portfolio</h2>{works.map(w=><div key={w.id} style={{borderBottom:"1px solid #444",padding:10}}><strong>{w.title}</strong><p>{w.description}</p><a href={w.media_url} target="_blank" rel="noopener noreferrer" style={{color:"#b4ff39"}}>View {w.media_type}</a> <button onClick={()=>remove("portfolio_items",w.id)}>Remove</button></div>)}
-   <h3>Add a project</h3><form onSubmit={addWork}><label>Title<input style={input} required value={work.title} onChange={e=>setWork({...work,title:e.target.value})}/></label><label>Description<textarea style={input} value={work.description} onChange={e=>setWork({...work,description:e.target.value})}/></label><label>Photo, video or project URL<input style={input} required type="url" value={work.media_url} onChange={e=>setWork({...work,media_url:e.target.value})}/></label><label>Type<select style={input} value={work.media_type} onChange={e=>setWork({...work,media_type:e.target.value})}><option value="link">Link</option><option value="video">Video</option><option value="image">Image</option></select></label><button style={btn} disabled={busy}>Add Project</button></form>
+  <section style={section}><h2>My Portfolio</h2>
+   <p>Showcase your work with photos, performance clips, reels, and project links. Upload multiple files at once. Maximum 50 MB per file. Photos and videos uploaded here are publicly accessible.</p>
+   <label style={{display:"block",marginBottom:18,fontWeight:700}}>Upload photos or videos
+    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" multiple disabled={busy} onChange={uploadPortfolio} style={{display:"block",marginTop:10}}/>
+   </label>
+   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14,marginBottom:25}}>
+    {works.map(w=><article key={w.id} style={{border:"1px solid #444",borderRadius:12,overflow:"hidden",background:"#0c0c0c"}}>
+     {w.media_type==="image"?<img src={w.media_url} alt={w.title} loading="lazy" style={{width:"100%",height:170,objectFit:"cover"}}/>:w.media_type==="video"?<video src={w.media_url} controls preload="metadata" style={{width:"100%",height:170,background:"#000"}}/>:<div style={{padding:18,minHeight:130,display:"flex",alignItems:"center"}}><a href={w.media_url} target="_blank" rel="noopener noreferrer" style={{color:"#b4ff39",overflowWrap:"anywhere"}}>Open project link</a></div>}
+     <div style={{padding:13}}><strong>{w.title}</strong>{w.description&&<p>{w.description}</p>}<p><button type="button" onClick={()=>remove("portfolio_items",w.id)} style={{cursor:"pointer"}}>Remove</button></p></div>
+    </article>)}
+   </div>
+   <h3>Or add a project link</h3>
+   <form onSubmit={addWork}><label>Project title<input style={input} required value={work.title} onChange={e=>setWork({...work,title:e.target.value})}/></label><label>Description<textarea style={input} value={work.description} onChange={e=>setWork({...work,description:e.target.value})}/></label><label>Photo, video or project URL<input style={input} required type="url" value={work.media_url} onChange={e=>setWork({...work,media_url:e.target.value})}/></label><label>Type<select style={input} value={work.media_type} onChange={e=>setWork({...work,media_type:e.target.value})}><option value="link">Link</option><option value="video">Video</option><option value="image">Image</option></select></label><button style={btn} disabled={busy}>Add Project Link</button></form>
   </section>
  </div></main>;
 }
