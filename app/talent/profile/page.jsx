@@ -51,7 +51,7 @@ export default function TalentProfile(){
  }
  async function addCredit(e){e.preventDefault();setBusy(true);const {error}=await db.from("professional_credits").insert({user_id:user.id,production:credit.production,role_name:credit.role_name,organization:credit.organization,credit_year:credit.credit_year?Number(credit.credit_year):null,category:credit.category});setMessage(error?error.message:"Credit added.");if(!error)setCredit(emptyCredit);await load(user.id);setBusy(false);}
  async function removeSelectedCredits(){const ids=selectedCreditIds.filter(id=>credits.some(c=>c.id===id));if(!ids.length)return;if(!window.confirm("Permanently remove "+ids.length+" selected résumé credit"+(ids.length===1?"":"s")+"? This cannot be undone."))return;setBusy(true);const {error}=await db.from("professional_credits").delete().eq("user_id",user.id).in("id",ids);if(error){setMessage(error.message);}else{setSelectedCreditIds([]);await load(user.id);setMessage(ids.length+" résumé credit"+(ids.length===1?"":"s")+" removed.");}setBusy(false);}
- async function uploadPortfolio(e){
+ async function uploadPortfolio(e,kind="portfolio"){
   const files=Array.from(e.target.files||[]);if(!files.length)return;
   setBusy(true);let added=0;let errors=[];
   for(const file of files){
@@ -64,10 +64,10 @@ export default function TalentProfile(){
    const {error:uploadError}=await db.storage.from("talent-portfolio").upload(path,file,{contentType:file.type});
    if(uploadError){errors.push(file.name+": "+uploadError.message);continue;}
    const url=db.storage.from("talent-portfolio").getPublicUrl(path).data.publicUrl;
-   const {error:insertError}=await db.from("portfolio_items").insert({user_id:user.id,title:file.name.replace(/\.[^.]+$/,"").replace(/[_-]/g," "),description:"",media_url:url,media_type:"image"});
+   const {error:insertError}=await db.from("portfolio_items").insert({user_id:user.id,title:file.name.replace(/\.[^.]+$/,"").replace(/[_-]/g," "),description:kind==="headshot"?"Professional headshot":"",media_url:url,media_type:"image"});
    if(insertError){await db.storage.from("talent-portfolio").remove([path]);errors.push(file.name+": "+insertError.message);}else added++;
   }
-  await load(user.id);setMessage(added+" file(s) added to My Portfolio."+(errors.length?" Issues: "+errors.join("; "):""));setBusy(false);e.target.value="";
+  await load(user.id);setMessage(added+" "+(kind==="headshot"?"headshot(s)":"portfolio photo(s)")+" uploaded."+(errors.length?" Issues: "+errors.join("; "):""));setBusy(false);e.target.value="";
  }
  async function remove(table,id){if(!window.confirm("Delete this item?"))return;const {error}=await db.from(table).delete().eq("id",id).eq("user_id",user.id);setMessage(error?error.message:"Item deleted.");await load(user.id);}
  const input={width:"100%",padding:11,borderRadius:8,border:"1px solid #666",marginTop:5,marginBottom:13,background:"#171717",color:"#fff"};
@@ -131,13 +131,13 @@ export default function TalentProfile(){
    <h3>Additional Resume Credit</h3><form onSubmit={addCredit}><label style={{display:"block"}}>Credit category<select style={input} value={credit.category} onChange={e=>setCredit({...credit,category:e.target.value})}>{creditCategories.map(t=><option key={t}>{t}</option>)}</select></label>{["production","role_name","organization","credit_year"].map(k=><label key={k} style={{display:"block"}}>{({production:"Production / Project",role_name:"Your Role",organization:"Organization/Lead",credit_year:"Year"})[k]}<input style={input} type={k==="credit_year"?"number":"text"} required={k==="production"||k==="role_name"} value={credit[k]} onChange={e=>setCredit({...credit,[k]:e.target.value})}/></label>)}<button style={btn} disabled={busy}>Add Credit</button></form>
   </section>
  </>}
- {dashboardTab==="portfolio"&&<>  <section style={section}><h2>My Portfolio</h2>
+ {dashboardTab==="portfolio"&&<>  <section style={section}><h2>Professional Headshots</h2><p>Upload multiple professional headshots for clients and casting teams to view. Your main profile picture stays separate.</p><label className="member-upload-label">+ Upload Headshots<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} onChange={e=>uploadPortfolio(e,"headshot")}/></label><div className="member-headshot-grid">{works.filter(w=>w.description==="Professional headshot").map(w=><article key={w.id}><img src={w.media_url} alt={w.title||"Professional headshot"} loading="lazy"/><button type="button" onClick={()=>remove("portfolio_items",w.id)}>Remove</button></article>)}</div><h2>My Portfolio</h2>
    <p>Upload your best photos to showcase your work. JPG, PNG, WebP, or GIF, up to 10 MB each. Uploaded photos have public URLs.</p>
    <label style={{display:"block",marginBottom:18,fontWeight:700}}>Upload portfolio photos
     <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple disabled={busy} onChange={uploadPortfolio} style={{display:"block",marginTop:10}}/>
    </label>
    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14,marginBottom:25}}>
-    {works.filter(w=>w.media_type==="image").map(w=><article key={w.id} style={{border:"1px solid #444",borderRadius:12,overflow:"hidden",background:"#0c0c0c"}}>
+    {works.filter(w=>w.media_type==="image"&&w.description!=="Professional headshot").map(w=><article key={w.id} style={{border:"1px solid #444",borderRadius:12,overflow:"hidden",background:"#0c0c0c"}}>
      <img src={w.media_url} alt={w.title} loading="lazy" style={{width:"100%",height:190,objectFit:"cover"}}/>
      <div style={{padding:13}}><strong>{w.title}</strong>{w.description&&<p>{w.description}</p>}<p><button type="button" onClick={()=>remove("portfolio_items",w.id)} style={{cursor:"pointer"}}>Remove photo</button></p></div>
     </article>)}
